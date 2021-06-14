@@ -112,8 +112,7 @@ static inline int moveit(lua_State *src, lua_State *dst, int idx, int eoi) {
         // case LUA_TTHREAD:
         default:
             lua_pushboolean(src, 0);
-            lua_pushfstring(src,
-                            "cannot pass <%s> value to the newstate function",
+            lua_pushfstring(src, "cannot exchange <%s> value",
                             lua_typename(src, t));
             lua_pushinteger(src, -1);
             return 3;
@@ -131,6 +130,7 @@ static int run_lua(lua_State *L) {
     lua_settop(state->L, 0);
     lua_rawgeti(state->L, LUA_REGISTRYINDEX, state->ref_fn);
     if ((rc = moveit(L, state->L, 2, lua_gettop(L)))) {
+        lua_settop(state->L, 0);
         return rc;
     }
 
@@ -161,6 +161,7 @@ static inline int load_lua(lua_State *L, loadfn fn) {
     int rc = loadit(L, state->L, 2, fn);
 
     if (rc) {
+        lua_settop(state->L, 0);
         return rc;
     }
     // unref old func
@@ -186,6 +187,7 @@ static inline int do_lua(lua_State *L, loadfn fn) {
 
     if ((rc = loadit(L, state->L, 2, fn)) ||
         (rc = moveit(L, state->L, 3, lua_gettop(L)))) {
+        lua_settop(state->L, 0);
         return rc;
     }
 
