@@ -51,21 +51,6 @@ static inline int loadstring(lua_State *L, const char *s, size_t len,
     return luaL_loadbuffer(L, s, len, name);
 }
 
-static inline int runit(lua_State *src, lua_State *dst) {
-    int rc = lua_pcall(dst, lua_gettop(dst) - 1, LUA_MULTRET, 0);
-
-    if (rc) {
-        size_t len = 0;
-        lua_pushboolean(src, 0);
-        lua_pushlstring(src, luaL_checklstring(dst, 1, &len), len);
-        lua_pushinteger(src, rc);
-        return 3;
-    }
-
-    lua_pushboolean(src, 1);
-    return 1;
-}
-
 static inline int moveit(lua_State *src, lua_State *dst, int idx, int eoi) {
     size_t len;
 
@@ -112,8 +97,7 @@ static inline int moveit(lua_State *src, lua_State *dst, int idx, int eoi) {
         // case LUA_TTHREAD:
         default:
             lua_pushboolean(src, 0);
-            lua_pushfstring(src,
-                            "cannot pass <%s> value to the newstate function",
+            lua_pushfstring(src, "cannot exchange <%s> value",
                             lua_typename(src, t));
             lua_pushinteger(src, -1);
             return 3;
@@ -124,6 +108,31 @@ static inline int moveit(lua_State *src, lua_State *dst, int idx, int eoi) {
     return 0;
 }
 
+static inline int runit(lua_State *src, lua_State *dst) {
+    int rc = lua_pcall(dst, lua_gettop(dst) - 1, LUA_MULTRET, 0);
+    int nres = 0;
+
+    if (rc) {
+        size_t len = 0;
+        lua_pushboolean(src, 0);
+        lua_pushlstring(src, luaL_checklstring(dst, 1, &len), len);
+        lua_pushinteger(src, rc);
+        return 3;
+    }
+
+    lua_pushboolean(src, 1);
+    nres = lua_gettop(dst);
+    if (nres) {
+        rc = moveit(dst, src, 1, nres);
+        lua_settop(dst, 0);
+        if (rc) {
+            return rc;
+        }
+    }
+
+    return 1 + nres;
+}
+
 static int run_lua(lua_State *L) {
     newstate_t *state = luaL_checkudata(L, 1, MODULE_MT);
     int rc = 0;
@@ -131,6 +140,7 @@ static int run_lua(lua_State *L) {
     lua_settop(state->L, 0);
     lua_rawgeti(state->L, LUA_REGISTRYINDEX, state->ref_fn);
     if ((rc = moveit(L, state->L, 2, lua_gettop(L)))) {
+        lua_settop(state->L, 0);
         return rc;
     }
 
@@ -161,6 +171,7 @@ static inline int load_lua(lua_State *L, loadfn fn) {
     int rc = loadit(L, state->L, 2, fn);
 
     if (rc) {
+        lua_settop(state->L, 0);
         return rc;
     }
     // unref old func
@@ -186,6 +197,7 @@ static inline int do_lua(lua_State *L, loadfn fn) {
 
     if ((rc = loadit(L, state->L, 2, fn)) ||
         (rc = moveit(L, state->L, 3, lua_gettop(L)))) {
+        lua_settop(state->L, 0);
         return rc;
     }
 
@@ -288,7 +300,7 @@ LUALIB_API int luaopen_newstate(lua_State *L) {
     }
 
     // export constants
-    lua_pushstring(L, "ERRARGS");
+    lua_pushstring(L, "ERRINVAL");
     lua_pushinteger(L, -1);
     lua_rawset(L, -3);
     lua_pushstring(L, "ERRRUN");
