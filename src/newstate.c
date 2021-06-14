@@ -51,21 +51,6 @@ static inline int loadstring(lua_State *L, const char *s, size_t len,
     return luaL_loadbuffer(L, s, len, name);
 }
 
-static inline int runit(lua_State *src, lua_State *dst) {
-    int rc = lua_pcall(dst, lua_gettop(dst) - 1, LUA_MULTRET, 0);
-
-    if (rc) {
-        size_t len = 0;
-        lua_pushboolean(src, 0);
-        lua_pushlstring(src, luaL_checklstring(dst, 1, &len), len);
-        lua_pushinteger(src, rc);
-        return 3;
-    }
-
-    lua_pushboolean(src, 1);
-    return 1;
-}
-
 static inline int moveit(lua_State *src, lua_State *dst, int idx, int eoi) {
     size_t len;
 
@@ -121,6 +106,31 @@ static inline int moveit(lua_State *src, lua_State *dst, int idx, int eoi) {
     }
 
     return 0;
+}
+
+static inline int runit(lua_State *src, lua_State *dst) {
+    int rc = lua_pcall(dst, lua_gettop(dst) - 1, LUA_MULTRET, 0);
+    int nres = 0;
+
+    if (rc) {
+        size_t len = 0;
+        lua_pushboolean(src, 0);
+        lua_pushlstring(src, luaL_checklstring(dst, 1, &len), len);
+        lua_pushinteger(src, rc);
+        return 3;
+    }
+
+    lua_pushboolean(src, 1);
+    nres = lua_gettop(dst);
+    if (nres) {
+        rc = moveit(dst, src, 1, nres);
+        lua_settop(dst, 0);
+        if (rc) {
+            return rc;
+        }
+    }
+
+    return 1 + nres;
 }
 
 static int run_lua(lua_State *L) {
@@ -290,7 +300,7 @@ LUALIB_API int luaopen_newstate(lua_State *L) {
     }
 
     // export constants
-    lua_pushstring(L, "ERRARGS");
+    lua_pushstring(L, "ERRINVAL");
     lua_pushinteger(L, -1);
     lua_rawset(L, -3);
     lua_pushstring(L, "ERRRUN");
