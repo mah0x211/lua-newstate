@@ -300,33 +300,9 @@ LUALIB_API int luaopen_newstate(lua_State *L) {
     }
 
     // export constants
-    lua_pushstring(L, "ERRINVAL");
-    lua_pushinteger(L, -1);
-    lua_rawset(L, -3);
-    lua_pushstring(L, "ERRRUN");
-    lua_pushinteger(L, LUA_ERRRUN);
-    lua_rawset(L, -3);
-    lua_pushstring(L, "ERRSYNTAX");
-    lua_pushinteger(L, LUA_ERRSYNTAX);
-    lua_rawset(L, -3);
-    lua_pushstring(L, "ERRMEM");
-    lua_pushinteger(L, LUA_ERRMEM);
-    lua_rawset(L, -3);
-    lua_pushstring(L, "ERRERR");
-    lua_pushinteger(L, LUA_ERRERR);
-    lua_rawset(L, -3);
+    // GEN_ERRCODE_DECL
+    // GEN_ERRCODE_DECL_END
 
-#if defined(LUA_ERRFILE)
-    lua_pushstring(L, "ERRFILE");
-    lua_pushinteger(L, LUA_ERRFILE);
-    lua_rawset(L, -3);
-#endif
-
-#if defined(LUA_ERRGCMM)
-    lua_pushstring(L, "ERRGCMM");
-    lua_pushinteger(L, LUA_ERRGCMM);
-    lua_rawset(L, -3);
-#endif
 
     return 1;
 }
