@@ -1,7 +1,8 @@
 package = "newstate"
-version = "scm-1"
+version = "0.3.0-1"
 source = {
-    url = "git://github.com/mah0x211/lua-newstate.git"
+    url = "git://github.com/mah0x211/lua-newstate.git",
+    tag = "v0.3.0"
 }
 description = {
     summary = "newstate module to run scripts in the new lua_State.",

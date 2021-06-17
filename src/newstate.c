@@ -212,6 +212,45 @@ static int dofile_lua(lua_State *L) {
     return do_lua(L, loadfile);
 }
 
+static int gc_lua(lua_State *L) {
+    newstate_t *state = luaL_checkudata(L, 1, MODULE_MT);
+    int what = (int)luaL_checkinteger(L, 2);
+    int arg = (int)luaL_optinteger(L, 3, 0);
+
+    switch (what) {
+
+#if defined(LUA_GCISRUNNING)
+    case LUA_GCISRUNNING:
+        lua_pushboolean(L, lua_gc(state->L, what, 0));
+        return 1;
+#endif
+
+#if defined(LUA_GCINC)
+    case LUA_GCINC: {
+        int pause = arg;
+        int stepmul = (int)luaL_optinteger(L, 4, 0);
+        int stepsize = (int)luaL_optinteger(L, 5, 0);
+        lua_pushinteger(L, lua_gc(state->L, pause, stepmul, stepsize));
+        return 1;
+    }
+
+#endif
+
+#if defined(LUA_GCGEN)
+    case LUA_GCGEN: {
+        int minormul = arg;
+        int majormul = (int)luaL_optinteger(L, 4, 0);
+        lua_pushinteger(L, lua_gc(state->L, minormul, majormul));
+        return 1;
+    }
+#endif
+
+    default:
+        lua_pushinteger(L, lua_gc(state->L, what, arg));
+        return 1;
+    }
+}
+
 static int new_lua(lua_State *L) {
     int openlibs = 1;
     newstate_t *state = NULL;
@@ -241,7 +280,7 @@ static int new_lua(lua_State *L) {
     return 1;
 }
 
-static int gc_lua(lua_State *L) {
+static int gc__lua(lua_State *L) {
     newstate_t *state = (newstate_t *)lua_touserdata(L, 1);
     lua_close(state->L);
     return 0;
@@ -254,11 +293,14 @@ static int tostring_lua(lua_State *L) {
 
 static void newmetatable_lua(lua_State *L) {
     struct luaL_Reg mmethods[] = {
-        {"__gc", gc_lua}, {"__tostring", tostring_lua}, {NULL, NULL}};
-    struct luaL_Reg methods[] = {
-        {"dofile", dofile_lua},     {"dostring", dostring_lua},
-        {"loadfile", loadfile_lua}, {"loadstring", loadstring_lua},
-        {"run", run_lua},           {NULL, NULL}};
+        {"__gc", gc__lua}, {"__tostring", tostring_lua}, {NULL, NULL}};
+    struct luaL_Reg methods[] = {{"dofile", dofile_lua},
+                                 {"dostring", dostring_lua},
+                                 {"loadfile", loadfile_lua},
+                                 {"loadstring", loadstring_lua},
+                                 {"run", run_lua},
+                                 {"gc", gc_lua},
+                                 {NULL, NULL}};
     struct luaL_Reg *fn = mmethods;
 
     // create metatable
@@ -300,33 +342,12 @@ LUALIB_API int luaopen_newstate(lua_State *L) {
     }
 
     // export constants
-    lua_pushstring(L, "ERRINVAL");
-    lua_pushinteger(L, -1);
-    lua_rawset(L, -3);
-    lua_pushstring(L, "ERRRUN");
-    lua_pushinteger(L, LUA_ERRRUN);
-    lua_rawset(L, -3);
-    lua_pushstring(L, "ERRSYNTAX");
-    lua_pushinteger(L, LUA_ERRSYNTAX);
-    lua_rawset(L, -3);
-    lua_pushstring(L, "ERRMEM");
-    lua_pushinteger(L, LUA_ERRMEM);
-    lua_rawset(L, -3);
-    lua_pushstring(L, "ERRERR");
-    lua_pushinteger(L, LUA_ERRERR);
-    lua_rawset(L, -3);
+    // GEN_ERRCODE_DECL
+    // GEN_ERRCODE_DECL_END
 
-#if defined(LUA_ERRFILE)
-    lua_pushstring(L, "ERRFILE");
-    lua_pushinteger(L, LUA_ERRFILE);
-    lua_rawset(L, -3);
-#endif
-
-#if defined(LUA_ERRGCMM)
-    lua_pushstring(L, "ERRGCMM");
-    lua_pushinteger(L, LUA_ERRGCMM);
-    lua_rawset(L, -3);
-#endif
+    // export gc constants
+    // GEN_GCWHAT_DECL
+    // GEN_GCWHAT_DECL_END
 
     return 1;
 }
