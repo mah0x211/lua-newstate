@@ -293,5 +293,5 @@ performs a full gc cycle.
 ```lua
 local newstate = require('newstate')
 local L = newstate.new()
-L:gc(newstate.GCOLLECT)
+L:gc(newstate.GCCOLLECT)
 ```
