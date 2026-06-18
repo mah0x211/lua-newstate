@@ -54,20 +54,22 @@ jobs:
     -
       name: Install Tools
       run: |
+        luarocks install testcase
         luarocks install assert
+        luarocks install luacov
     -
       name: Run Test
       run: |
-        lua ./test/newstate_test.lua
+        testcase --coverage ./test/
     -
       name: Generate coverage reports
       run: |
         sh ./covgen.sh
     -
-      name: Upload C coverage to Codecov
+      name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
         use_oidc: true
         disable_search: true
-        files: ./coverage/lcov.info
+        files: ./luacov.report.out,./coverage/lcov.info
         flags: unittests
