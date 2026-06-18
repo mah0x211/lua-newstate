@@ -1,34 +1,41 @@
+rockspec_format = "3.0"
 package = "newstate"
 version = "scm-1"
 source = {
-    url = "git://github.com/mah0x211/lua-newstate.git"
+    url = "git+https://github.com/mah0x211/lua-newstate.git",
 }
 description = {
     summary = "newstate module to run scripts in the new lua_State.",
     homepage = "https://github.com/mah0x211/lua-newstate",
     license = "MIT/X11",
-    maintainer = "Masatoshi Fukunaga"
+    maintainer = "Masatoshi Fukunaga",
 }
 dependencies = {
     "lua >= 5.1",
 }
+build_dependencies = {
+    "luarocks-build-hooks >= 0.8.0",
+}
 build = {
-    type = "make",
-    build_variables = {
-        PACKAGE         = "newstate",
-        SRCDIR          = "src",
-        VARDIR          = "var",
-        CFLAGS          = "$(CFLAGS)",
-        WARNINGS        = "-Wall -Wno-trigraphs -Wmissing-field-initializers -Wreturn-type -Wmissing-braces -Wparentheses -Wno-switch -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wuninitialized -Wunknown-pragmas -Wshadow -Wsign-compare",
-        CPPFLAGS        = "-I$(LUA_INCDIR)",
-        LDFLAGS         = "$(LIBFLAG)",
-        LIB_EXTENSION   = "$(LIB_EXTENSION)"
+    type = "hooks",
+    before_build = {
+        "$(extra-vars)",
+        "codegen.lua",
     },
-    install_variables = {
-        PACKAGE         = "newstate",
-        SRCDIR          = "src",
-        LIBDIR          = "$(LIBDIR)",
-        PREFIX          = "$(PREFIX)",
-        LIB_EXTENSION   = "$(LIB_EXTENSION)"
-    }
+    extra_variables = {
+        CFLAGS = "-Wall -Wno-trigraphs -Wmissing-field-initializers -Wreturn-type -Wmissing-braces -Wparentheses -Wno-switch -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wuninitialized -Wunknown-pragmas -Wshadow -Wsign-compare",
+    },
+    conditional_variables = {
+        NEWSTATE_COVERAGE = {
+            CFLAGS = "--coverage",
+            LIBFLAG = "--coverage",
+        },
+    },
+    modules = {
+        ["newstate"] = {
+            sources = {
+                "src/newstate.c",
+            },
+        },
+    },
 }

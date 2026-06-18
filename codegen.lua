@@ -1,3 +1,16 @@
+-- codegen.lua expands var/*.txt constant lists into src/newstate.c
+-- between GEN_<NAME>_DECL / <NAME>_END markers. Runs as a luarocks
+-- build hook before compilation, without command-line arguments.
+
+local VAR_FILES = {
+    'var/errcode.txt',
+    'var/gcwhat.txt',
+}
+
+local SRC_FILES = {
+    'src/newstate.c',
+}
+
 local TMPL = [=[
 #if defined(%s)
     lua_pushstring(L, "%s");
@@ -8,7 +21,7 @@ local TMPL = [=[
 local decls = {}
 
 -- load declaration
-for _, path in ipairs(_G.arg) do
+for _, path in ipairs(VAR_FILES) do
     local varname = path:match('/([%w_]+).txt$')
     if varname then
         local decl = ('GEN_%s_DECL'):format(varname:upper())
@@ -40,9 +53,11 @@ for _, path in ipairs(_G.arg) do
 end
 
 -- inject declaration
-for _, path in ipairs(_G.arg) do
+for _, path in ipairs(SRC_FILES) do
     if path:find('%.c$') then
-        local src = assert(io.open(path)):read('*a')
+        local f = assert(io.open(path))
+        local src = f:read('*a')
+        f:close()
         local len = #src
 
         for _, v in ipairs(decls) do
@@ -60,7 +75,9 @@ for _, path in ipairs(_G.arg) do
         end
 
         if #src > len then
-            assert(io.open(path, 'w')):write(src)
+            local out = assert(io.open(path, 'w'))
+            out:write(src)
+            out:close()
         end
     end
 end
