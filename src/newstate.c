@@ -20,11 +20,9 @@
  *  DEALINGS IN THE SOFTWARE.
  */
 
-#include <errno.h>
+// lua
 #include <lauxlib.h>
-#include <lua.h>
 #include <lualib.h>
-#include <string.h>
 
 #define MODULE_MT "newstate"
 
@@ -52,11 +50,8 @@ static inline int loadstring(lua_State *L, const char *s, size_t len,
 }
 
 static inline int moveit(lua_State *src, lua_State *dst, int idx, int eoi) {
-    size_t len;
-
     while (idx <= eoi) {
         const int t = lua_type(src, idx);
-
         switch (t) {
         case LUA_TNIL:
             lua_pushnil(dst);
@@ -74,9 +69,11 @@ static inline int moveit(lua_State *src, lua_State *dst, int idx, int eoi) {
             lua_pushnumber(dst, lua_tonumber(src, idx));
             break;
 
-        case LUA_TSTRING:
-            lua_pushlstring(dst, lua_tolstring(src, idx, &len), len);
-            break;
+        case LUA_TSTRING: {
+            size_t len = 0;
+            const char *s = lua_tolstring(src, idx, &len);
+            lua_pushlstring(dst, s, len);
+        } break;
 
         case LUA_TTABLE:
             lua_createtable(dst, tbllen(src, idx), 0);
@@ -218,14 +215,13 @@ static int gc_lua(lua_State *L) {
     int arg = (int)luaL_optinteger(L, 3, 0);
 
     switch (what) {
-
 #if defined(LUA_GCISRUNNING)
     case LUA_GCISRUNNING:
         lua_pushboolean(L, lua_gc(state->L, what, 0));
         return 1;
 #endif
 
-#if defined(LUA_GCINC)
+#if LUA_VERSION_NUM >= 504
     case LUA_GCINC: {
         int pause = arg;
         int stepmul = (int)luaL_optinteger(L, 4, 0);
@@ -236,7 +232,7 @@ static int gc_lua(lua_State *L) {
 
 #endif
 
-#if defined(LUA_GCGEN)
+#if LUA_VERSION_NUM >= 504
     case LUA_GCGEN: {
         int minormul = arg;
         int majormul = (int)luaL_optinteger(L, 4, 0);
